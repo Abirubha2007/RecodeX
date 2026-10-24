@@ -31,8 +31,10 @@ COPY server/ ./server/
 # Frontend static assets served via FastAPI (optional – alternatively use a CDN)
 COPY --from=frontend-builder /app/client/dist ./static/
 
+ENV PYTHONPATH=/app/server
+
 # Expose port
 EXPOSE 8000
 
 # Start server
-CMD ["uvicorn", "server.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--app-dir", "server", "--host", "0.0.0.0", "--port", "8000"]

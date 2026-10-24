@@ -38,6 +38,9 @@ services:
     rootDir: client
     buildCommand: npm ci --legacy-peer-deps && npm run build
     staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://recodex-api.onrender.com
     headers:
       - path: /*
         name: Cache-Control
