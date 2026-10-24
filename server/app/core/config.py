@@ -5,24 +5,49 @@ Loads from the root .env file in development; production deployments
 override individual variables through the process environment.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
 
+from dotenv import load_dotenv
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger("recodex.config")
 
-# Resolve .env relative to the repository root (two levels above this file)
+# Resolve candidate locations for .env:
+# 1. Root repository directory: C:\Users\...\RecodeX\.env
 _ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
+# 2. Server directory: C:\Users\...\RecodeX\server\.env
+_SERVER_ENV = Path(__file__).resolve().parents[2] / ".env"
+# 3. Current working directory .env
+_CWD_ENV = Path.cwd() / ".env"
+
+_CANDIDATE_ENVS = (_ROOT_ENV, _SERVER_ENV, _CWD_ENV, Path(".env"))
+
+
+def _load_env_files() -> None:
+    """Load variables from .env into os.environ if present, without overriding existing env vars."""
+    for candidate in (_ROOT_ENV, _SERVER_ENV, _CWD_ENV):
+        try:
+            if candidate.is_file():
+                load_dotenv(dotenv_path=candidate, override=False)
+                break
+        except Exception:
+            pass
+
+
+# Pre-load on import
+_load_env_files()
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=str(_ROOT_ENV) if _ROOT_ENV.exists() else None,
+        env_file=(_ROOT_ENV, _SERVER_ENV, ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -40,7 +65,7 @@ class Settings(BaseSettings):
     # ── CORS ──────────────────────────────────────────────────────────────────
     CORS_ORIGINS: str = Field(
         default='["http://localhost:5173"]',
-        description="JSON array of allowed origins",
+        description="JSON array or comma-separated string of allowed origins",
     )
 
     # ── Execution provider ────────────────────────────────────────────────────
@@ -60,29 +85,61 @@ class Settings(BaseSettings):
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def _normalize_cors(cls, v):
-        """Accept both a raw JSON string and a plain comma-separated list."""
+        """Accept both a raw JSON string and a list."""
         if isinstance(v, list):
             return json.dumps(v)
         return v
 
     @property
     def cors_origins_list(self) -> List[str]:
+        if not self.CORS_ORIGINS:
+            return ["*"]
+        raw = str(self.CORS_ORIGINS).strip()
+        # 1. Try standard JSON array parsing
         try:
-            origins = json.loads(self.CORS_ORIGINS)
+            origins = json.loads(raw)
             if isinstance(origins, list):
-                return [str(o) for o in origins]
+                return [str(o).strip() for o in origins if str(o).strip()]
+            if isinstance(origins, str):
+                raw = origins.strip()
         except (json.JSONDecodeError, TypeError):
             pass
-        # Fallback: split on comma
-        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+        # 2. Handle bracketed Python list syntax: ['http://...', '...']
+        if raw.startswith("[") and raw.endswith("]"):
+            raw = raw[1:-1]
+
+        # 3. Fallback: split on comma and clean surrounding quotes/whitespace
+        cleaned = [item.strip().strip("'\"") for item in raw.split(",") if item.strip().strip("'\"")]
+        return cleaned or ["*"]
 
     @property
     def groq_configured(self) -> bool:
-        return bool(self.GROQ_API_KEY)
+        if not self.GROQ_API_KEY:
+            return False
+        key = self.GROQ_API_KEY.strip()
+        if not key or key.lower() in (
+            "your_groq_api_key_here",
+            "your_api_key_here",
+            "placeholder",
+            "none",
+            "null",
+        ):
+            return False
+        if key.startswith("your_") and key.endswith("_here"):
+            return False
+        return True
 
     @property
     def execution_configured(self) -> bool:
-        return bool(self.JUDGE0_BASE_URL)
+        if not self.JUDGE0_BASE_URL:
+            return False
+        url = self.JUDGE0_BASE_URL.strip()
+        if not url or url.lower() in ("placeholder", "none", "null", "your_judge0_url_here"):
+            return False
+        if url.startswith("your_") and url.endswith("_here"):
+            return False
+        return True
 
     @property
     def max_code_bytes(self) -> int:
@@ -95,10 +152,11 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
+    _load_env_files()
     s = Settings()
     if not s.groq_configured:
         logger.warning(
-            "GROQ_API_KEY is not set – AI features will be unavailable. "
+            "GROQ_API_KEY is not set or using placeholder – AI features will be unavailable. "
             "Set GROQ_API_KEY in your .env file to enable them."
         )
     if not s.execution_configured:
