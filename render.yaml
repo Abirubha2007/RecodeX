@@ -19,10 +19,10 @@ services:
       - key: CORS_ORIGINS
         value: '["https://recodex-client.onrender.com"]'
       - key: EXECUTION_PROVIDER
-        value: judge0
-      - key: JUDGE0_BASE_URL
-        sync: false          # set in Render dashboard
-      - key: JUDGE0_API_KEY
+        value: onlinecompiler
+      - key: ONLINECOMPILER_BASE_URL
+        value: https://api.onlinecompiler.io
+      - key: ONLINECOMPILER_API_KEY
         sync: false          # set in Render dashboard
       - key: EXECUTION_TIMEOUT_SECONDS
         value: "5"

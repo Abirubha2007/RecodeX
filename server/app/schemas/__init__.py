@@ -24,7 +24,8 @@ class Language(BaseModel):
     id: str           # internal id, e.g. "python"
     name: str
     version: Optional[str] = None
-    judge0_id: Optional[int] = None   # provider language id
+    compiler_id: Optional[str] = None # provider compiler id, e.g. "python-3.14"
+    judge0_id: Optional[int] = None   # retained for backward compatibility
 
 
 class LanguagesResponse(BaseModel):

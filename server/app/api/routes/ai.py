@@ -3,7 +3,7 @@
 import logging
 from fastapi import APIRouter, HTTPException, Request
 
-from app.core.config import get_settings
+from app.core import config
 from app.schemas import (
     ExplainRequest, ExplainResponse,
     OptimizeRequest, OptimizeResponse,
@@ -15,7 +15,7 @@ logger = logging.getLogger("recodex.routes.ai")
 
 
 def _require_groq():
-    settings = get_settings()
+    settings = config.get_settings()
     if not settings.groq_configured:
         raise HTTPException(
             status_code=503,
@@ -29,7 +29,7 @@ def _require_groq():
 @router.post("/explain", response_model=ExplainResponse)
 def explain(req: ExplainRequest, request: Request):
     _require_groq()
-    settings = get_settings()
+    settings = config.get_settings()
     if len(req.source_code.encode()) > settings.max_code_bytes:
         raise HTTPException(status_code=413, detail="Source code too large.")
 
@@ -58,7 +58,7 @@ def explain(req: ExplainRequest, request: Request):
 @router.post("/optimize", response_model=OptimizeResponse)
 def optimize(req: OptimizeRequest, request: Request):
     _require_groq()
-    settings = get_settings()
+    settings = config.get_settings()
     if len(req.source_code.encode()) > settings.max_code_bytes:
         raise HTTPException(status_code=413, detail="Source code too large.")
 

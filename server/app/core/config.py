@@ -69,7 +69,10 @@ class Settings(BaseSettings):
     )
 
     # ── Execution provider ────────────────────────────────────────────────────
-    EXECUTION_PROVIDER: str = "judge0"
+    EXECUTION_PROVIDER: str = "onlinecompiler"
+    ONLINECOMPILER_BASE_URL: str = "https://api.onlinecompiler.io"
+    ONLINECOMPILER_API_KEY: Optional[str] = None
+    # Backward-compatible fallbacks
     JUDGE0_BASE_URL: Optional[str] = None
     JUDGE0_API_KEY: Optional[str] = None
 
@@ -132,14 +135,19 @@ class Settings(BaseSettings):
 
     @property
     def execution_configured(self) -> bool:
-        if not self.JUDGE0_BASE_URL:
-            return False
-        url = self.JUDGE0_BASE_URL.strip()
-        if not url or url.lower() in ("placeholder", "none", "null", "your_judge0_url_here"):
-            return False
-        if url.startswith("your_") and url.endswith("_here"):
-            return False
-        return True
+        # Check OnlineCompiler.io key
+        if self.ONLINECOMPILER_API_KEY:
+            key = self.ONLINECOMPILER_API_KEY.strip()
+            if key and key.lower() not in (
+                "placeholder", "none", "null", "your_onlinecompiler_api_key_here", "your_api_key_here"
+            ) and not (key.startswith("your_") and key.endswith("_here")):
+                return True
+        # Backward-compatible check for Judge0 endpoint if set
+        if self.JUDGE0_BASE_URL:
+            url = self.JUDGE0_BASE_URL.strip()
+            if url and url.lower() not in ("placeholder", "none", "null", "your_judge0_url_here") and not (url.startswith("your_") and url.endswith("_here")):
+                return True
+        return False
 
     @property
     def max_code_bytes(self) -> int:
@@ -161,7 +169,7 @@ def get_settings() -> Settings:
         )
     if not s.execution_configured:
         logger.warning(
-            "JUDGE0_BASE_URL is not set – code execution will be unavailable. "
-            "Configure an execution provider in your .env file."
+            "ONLINECOMPILER_API_KEY is not set or using placeholder – code execution will be unavailable. "
+            "Set ONLINECOMPILER_API_KEY in your .env file to enable execution."
         )
     return s
