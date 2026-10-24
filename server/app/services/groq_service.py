@@ -13,7 +13,7 @@ from typing import Any, Dict
 import httpx
 from groq import Groq, APIConnectionError, APIStatusError, APITimeoutError
 
-from app.core.config import get_settings
+from app.core import config
 from app.schemas import OptimizationResult
 
 logger = logging.getLogger("recodex.groq")
@@ -41,7 +41,7 @@ _OPTIMIZE_SCHEMA = """{
 
 
 def _get_client() -> Groq:
-    settings = get_settings()
+    settings = config.get_settings()
     if not settings.groq_configured:
         raise RuntimeError(
             "GROQ_API_KEY is not configured. "
@@ -51,7 +51,7 @@ def _get_client() -> Groq:
 
 
 def _chat(messages: list, timeout: float = 30.0) -> str:
-    settings = get_settings()
+    settings = config.get_settings()
     client = _get_client()
     try:
         response = client.chat.completions.create(

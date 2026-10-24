@@ -3,7 +3,7 @@
 import logging
 from fastapi import APIRouter, HTTPException, Request
 
-from app.core.config import get_settings
+from app.core import config
 from app.schemas import GreenScoreRequest, GreenScoreResponse
 from app.services.green_score_service import calculate_green_score
 
@@ -13,7 +13,7 @@ logger = logging.getLogger("recodex.routes.green_score")
 
 @router.post("/green-score", response_model=GreenScoreResponse)
 def green_score(req: GreenScoreRequest, request: Request):
-    settings = get_settings()
+    settings = config.get_settings()
 
     if len(req.source_code.encode()) > settings.max_code_bytes:
         raise HTTPException(status_code=413, detail="Source code too large.")

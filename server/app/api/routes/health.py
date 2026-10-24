@@ -1,14 +1,14 @@
 """Health check endpoint."""
 
 from fastapi import APIRouter
-from app.core.config import get_settings
+from app.core import config
 
 router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
 def health():
-    settings = get_settings()
+    settings = config.get_settings()
     return {
         "status": "ok",
         "version": "1.0.0",

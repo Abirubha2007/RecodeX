@@ -4,7 +4,7 @@ import asyncio
 import logging
 from fastapi import APIRouter, HTTPException, Request
 
-from app.core.config import get_settings
+from app.core import config
 from app.schemas import BenchmarkRequest, BenchmarkDataPoint, BenchmarkResponse
 from app.services.execution_service import execute_code
 
@@ -14,7 +14,7 @@ logger = logging.getLogger("recodex.routes.benchmark")
 
 @router.post("/benchmark", response_model=BenchmarkResponse)
 async def benchmark(req: BenchmarkRequest, request: Request):
-    settings = get_settings()
+    settings = config.get_settings()
 
     if len(req.source_code.encode()) > settings.max_code_bytes:
         raise HTTPException(status_code=413, detail="Source code too large.")

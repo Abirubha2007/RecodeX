@@ -3,7 +3,7 @@
 import logging
 from fastapi import APIRouter, HTTPException, Request
 
-from app.core.config import get_settings
+from app.core import config
 from app.schemas import CompareRequest, CompareResponse
 from app.services.benchmark_service import compare_versions
 
@@ -13,7 +13,7 @@ logger = logging.getLogger("recodex.routes.compare")
 
 @router.post("/compare", response_model=CompareResponse)
 async def compare(req: CompareRequest, request: Request):
-    settings = get_settings()
+    settings = config.get_settings()
     limit = settings.max_code_bytes
 
     if len(req.original_code.encode()) > limit or len(req.candidate_code.encode()) > limit:

@@ -3,7 +3,7 @@
 import logging
 from fastapi import APIRouter, HTTPException, Request
 
-from app.core.config import get_settings
+from app.core import config
 from app.schemas import ExecuteRequest, ExecuteResponse
 from app.services.execution_service import execute_code
 
@@ -13,7 +13,7 @@ logger = logging.getLogger("recodex.routes.execute")
 
 @router.post("/execute", response_model=ExecuteResponse)
 async def run_code(req: ExecuteRequest, request: Request):
-    settings = get_settings()
+    settings = config.get_settings()
 
     # Validate size
     code_bytes = len(req.source_code.encode())
