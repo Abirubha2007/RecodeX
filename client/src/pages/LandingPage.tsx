@@ -1,10 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import {
   Zap, Code2, BarChart2, GitCompare, Gauge,
-  Play, Brain, Shield, TrendingUp, ArrowRight
+  Play, Brain, Shield, TrendingUp, ArrowRight, ShieldCheck, FileText, Lock
 } from 'lucide-react';
 
 const FEATURES = [
+  {
+    icon: ShieldCheck,
+    name: 'Proof-Carrying Optimization',
+    desc: 'Every accepted optimization ships with a cryptographically-hashed Proof Report — source snapshots, SHA-256 fingerprints, per-version execution outcomes, and a correctness verdict. Never trust an AI suggestion without evidence.',
+    highlight: true,
+  },
   {
     icon: Play,
     name: 'Secure Code Execution',
@@ -115,11 +121,123 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Proof-Carrying Optimization Spotlight */}
+      <section style={{
+        maxWidth: 960,
+        margin: '60px auto 0',
+        padding: '0 24px',
+      }}>
+        <div style={{
+          background: 'linear-gradient(135deg, var(--color-surface) 0%, color-mix(in srgb, var(--color-primary) 8%, var(--color-surface)) 100%)',
+          border: '1px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-border))',
+          borderRadius: 16,
+          padding: '40px 48px',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 48,
+          alignItems: 'center',
+        }}>
+          {/* Left: copy */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                background: 'var(--color-primary)',
+                borderRadius: 10,
+                width: 40, height: 40,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <ShieldCheck size={20} color="#fff" />
+              </div>
+              <span style={{
+                fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: 'var(--color-primary)',
+              }}>New Feature</span>
+            </div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-heading)', margin: 0, lineHeight: 1.3 }}>
+              Proof-Carrying Optimization
+            </h2>
+            <p style={{ color: 'var(--color-muted)', lineHeight: 1.7, margin: 0 }}>
+              Every accepted optimization now ships with a tamper-evident <strong style={{ color: 'var(--color-text)' }}>Proof Report</strong>:
+              source snapshots, SHA-256 cryptographic fingerprints, per-version execution outcomes,
+              and a correctness verdict — all kept strictly separate from the performance verdict.
+            </p>
+            <p style={{ color: 'var(--color-muted)', lineHeight: 1.7, margin: 0 }}>
+              Export the report as JSON or a standalone HTML certificate. Share it. Archive it.
+              Never accept an AI optimization without evidence.
+            </p>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
+              <button
+                id="pco-try-it-btn"
+                className="btn btn-primary"
+                onClick={() => navigate('/green-diff')}
+              >
+                <ShieldCheck size={15} /> Try It — Green Diff
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Right: proof report mini-preview */}
+          <div style={{
+            background: 'var(--color-surface-2, #1e1e2e)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 12,
+            padding: '20px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            fontSize: '0.8125rem',
+            fontFamily: 'monospace',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <ShieldCheck size={14} style={{ color: 'var(--color-success, #22c55e)' }} />
+              <span style={{ fontWeight: 600, color: 'var(--color-heading)', fontFamily: 'inherit' }}>Proof Report</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)', marginLeft: 'auto' }}>proof_a3f9...</span>
+            </div>
+            {[
+              { icon: Lock, label: 'Correctness', value: 'Verified for tested cases', color: 'var(--color-success, #22c55e)' },
+              { icon: TrendingUp, label: 'Performance', value: 'Improvement (−0.032s)', color: 'var(--color-primary)' },
+              { icon: FileText, label: 'Original SHA-256', value: 'a3f9c2e1d4b87...', color: 'var(--color-muted)' },
+              { icon: FileText, label: 'Candidate SHA-256', value: '8d1e4a9f3c026...', color: 'var(--color-muted)' },
+            ].map(({ icon: RowIcon, label, value, color }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <RowIcon size={13} style={{ color, marginTop: 2, flexShrink: 0 }} />
+                <div>
+                  <span style={{ color: 'var(--color-muted)' }}>{label}: </span>
+                  <span style={{ color }}>{value}</span>
+                </div>
+              </div>
+            ))}
+            <div style={{
+              marginTop: 4,
+              padding: '6px 10px',
+              background: 'color-mix(in srgb, var(--color-success, #22c55e) 10%, transparent)',
+              borderRadius: 6,
+              color: 'var(--color-success, #22c55e)',
+              fontSize: '0.75rem',
+              fontFamily: 'sans-serif',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <Lock size={11} /> Secrets Redacted · Provider: onlinecompiler
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section id="features" className="features-grid">
-        {FEATURES.map(({ icon: Icon, name, desc }) => (
-          <div key={name} className="feature-card">
-            <div className="feature-icon">
+        {FEATURES.map(({ icon: Icon, name, desc, highlight }: any) => (
+          <div
+            key={name}
+            className="feature-card"
+            style={highlight ? {
+              gridColumn: 'span 2',
+              border: '1px solid color-mix(in srgb, var(--color-primary) 40%, var(--color-border))',
+              background: 'color-mix(in srgb, var(--color-primary) 5%, var(--color-surface))',
+            } : undefined}
+          >
+            <div className="feature-icon" style={highlight ? { background: 'var(--color-primary)', color: '#fff' } : undefined}>
               <Icon size={20} />
             </div>
             <div className="feature-name">{name}</div>

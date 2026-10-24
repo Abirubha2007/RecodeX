@@ -118,6 +118,23 @@ export const api = {
     }
   },
 
+  compareReportHtml: async (payload: {
+    language: string;
+    original_code: string;
+    candidate_code: string;
+    test_inputs?: string[];
+  }): Promise<string> => {
+    try {
+      const { data } = await http.post('/compare/report/html', payload, {
+        headers: { Accept: 'text/html' },
+        responseType: 'text',
+      });
+      return data;
+    } catch (e) {
+      return handleError(e);
+    }
+  },
+
   benchmark: async (payload: {
     language: string;
     source_code: string;

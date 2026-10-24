@@ -2,16 +2,16 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import {
   Code2, BarChart2, GitCompare, Gauge, Settings,
-  ChevronLeft, ChevronRight, Zap
+  ChevronLeft, ChevronRight, Zap, ShieldCheck
 } from 'lucide-react';
 import { api } from '@/services/api';
 import type { HealthResponse } from '@/types/api';
 
 const NAV_ITEMS = [
-  { to: '/playground', icon: Code2,    label: 'Playground' },
-  { to: '/analysis',   icon: BarChart2, label: 'Code Analysis' },
-  { to: '/green-diff', icon: GitCompare, label: 'Green Diff' },
-  { to: '/benchmark',  icon: Gauge,    label: 'Benchmark' },
+  { to: '/playground', icon: Code2,       label: 'Playground' },
+  { to: '/analysis',   icon: BarChart2,   label: 'Code Analysis' },
+  { to: '/green-diff', icon: ShieldCheck, label: 'Proof Report' },
+  { to: '/benchmark',  icon: Gauge,       label: 'Benchmark' },
 ];
 
 export function AppShell() {

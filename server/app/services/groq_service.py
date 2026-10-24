@@ -40,6 +40,16 @@ _OPTIMIZE_SCHEMA = """{
 }"""
 
 
+_FALLBACK_MODELS = [
+    "qwen/qwen3.8-27b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "llama-3.3-70b-versatile",
+]
+
+_RESOLVED_MODEL: str | None = None
+
+
 def _get_client() -> Groq:
     settings = config.get_settings()
     if not settings.groq_configured:
@@ -51,33 +61,54 @@ def _get_client() -> Groq:
 
 
 def _chat(messages: list, timeout: float = 30.0) -> str:
+    global _RESOLVED_MODEL
     settings = config.get_settings()
     client = _get_client()
-    try:
-        response = client.chat.completions.create(
-            model=settings.GROQ_MODEL,
-            messages=messages,
-            temperature=0.3,
-            max_tokens=4096,
-            timeout=timeout,
-        )
-        return response.choices[0].message.content or ""
-    except APITimeoutError as e:
-        logger.warning("Groq request timed out: %s", e)
-        raise RuntimeError("AI request timed out. Please try again.") from e
-    except APIConnectionError as e:
-        logger.warning("Groq connection error: %s", e)
-        raise RuntimeError("Could not reach the AI provider. Check your network.") from e
-    except APIStatusError as e:
-        logger.warning("Groq API error %s: %s", e.status_code, e.message)
-        if e.status_code == 401:
-            raise RuntimeError("Invalid GROQ_API_KEY. Check your .env file.") from e
-        if e.status_code == 404:
-            model = get_settings().GROQ_MODEL
-            raise RuntimeError(
-                f"Model '{model}' not found. Update GROQ_MODEL in your .env file."
-            ) from e
-        raise RuntimeError(f"AI provider error: {e.message}") from e
+
+    if _RESOLVED_MODEL:
+        models_to_try = [_RESOLVED_MODEL]
+    else:
+        models_to_try = [settings.GROQ_MODEL] + [
+            m for m in _FALLBACK_MODELS if m != settings.GROQ_MODEL
+        ]
+
+    last_error: Exception | None = None
+    for idx, model in enumerate(models_to_try):
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=0.3,
+                max_tokens=4096,
+                timeout=timeout,
+            )
+            _RESOLVED_MODEL = model
+            return response.choices[0].message.content or ""
+        except APITimeoutError as e:
+            logger.warning("Groq request timed out on model %s: %s", model, e)
+            raise RuntimeError("AI request timed out. Please try again.") from e
+        except APIConnectionError as e:
+            logger.warning("Groq connection error on model %s: %s", model, e)
+            raise RuntimeError("Could not reach the AI provider. Check your network.") from e
+        except APIStatusError as e:
+            logger.warning("Groq API error on model %s (%s): %s", model, e.status_code, e.message)
+            last_error = e
+            if e.status_code == 401:
+                raise RuntimeError("Invalid GROQ_API_KEY. Check your .env file.") from e
+            if e.status_code == 429:
+                raise RuntimeError("Groq rate limit reached. Please wait a moment and try again.") from e
+            if e.status_code == 404:
+                # Model not found or not permitted for this account; try next candidate
+                if idx < len(models_to_try) - 1:
+                    continue
+                raise RuntimeError(
+                    f"Configured model '{settings.GROQ_MODEL}' and fallback models are not accessible on this account."
+                ) from e
+            raise RuntimeError(f"AI provider error: {e.message}") from e
+
+    if last_error:
+        raise RuntimeError(f"AI provider error: {last_error}")
+    raise RuntimeError("No suitable AI model found.")
 
 
 def explain_code(language: str, source_code: str, context: str | None = None) -> Dict[str, Any]:

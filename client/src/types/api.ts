@@ -76,6 +76,63 @@ export interface VersionResult {
   memory_kb?: number;
 }
 
+export interface SourceSnapshot {
+  code: string;
+  sha256: string;
+  bytes: number;
+}
+
+export interface ExecutionProviderInfo {
+  provider: string;
+  compiler: string;
+}
+
+export interface VersionExecutionReport {
+  status: string;
+  exit_code?: number;
+  time_seconds?: number;
+  memory_kb?: number;
+  stdout_sample?: string;
+  stderr_sample?: string;
+}
+
+export interface CorrectnessEvidence {
+  status: 'verified' | 'failed' | 'unverified';
+  label: string;
+  outputs_match: boolean;
+  details: string;
+}
+
+export interface PerformanceEvidence {
+  verdict: 'improvement' | 'regression' | 'equivalence' | 'insufficient_evidence';
+  label: string;
+  time_delta_seconds?: number;
+  memory_delta_kb?: number;
+  details: string;
+}
+
+export interface ProofReport {
+  id: string;
+  timestamp: string;
+  language: string;
+  test_inputs: string[];
+  source: {
+    original: SourceSnapshot;
+    candidate: SourceSnapshot;
+  };
+  execution_provider: ExecutionProviderInfo;
+  executions: {
+    original: VersionExecutionReport;
+    candidate: VersionExecutionReport;
+  };
+  correctness: CorrectnessEvidence;
+  performance: PerformanceEvidence;
+  missing_metrics: string[];
+  limitations: string[];
+  unresolved_risks: string[];
+  secrets_redacted: boolean;
+}
+
 export interface CompareResponse {
   correctness_verified: boolean;
   original: VersionResult;
@@ -86,6 +143,7 @@ export interface CompareResponse {
   verdict: 'improvement' | 'regression' | 'equivalent' | 'unverified' | 'failed';
   explanation: string;
   limitations: string[];
+  proof_report?: ProofReport;
 }
 
 export interface BenchmarkDataPoint {

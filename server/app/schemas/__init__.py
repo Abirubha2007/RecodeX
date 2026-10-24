@@ -146,6 +146,57 @@ class VersionResult(BaseModel):
     memory_kb: Optional[int] = None
 
 
+class SourceSnapshot(BaseModel):
+    code: str
+    sha256: str
+    bytes: int
+
+
+class ExecutionProviderInfo(BaseModel):
+    provider: str
+    compiler: str
+
+
+class VersionExecutionReport(BaseModel):
+    status: str
+    exit_code: Optional[int] = None
+    time_seconds: Optional[float] = None
+    memory_kb: Optional[int] = None
+    stdout_sample: Optional[str] = None
+    stderr_sample: Optional[str] = None
+
+
+class CorrectnessEvidence(BaseModel):
+    status: str       # "verified" | "failed" | "unverified"
+    label: str        # e.g. "Verified for tested cases"
+    outputs_match: bool
+    details: str
+
+
+class PerformanceEvidence(BaseModel):
+    verdict: str      # "improvement" | "regression" | "equivalence" | "insufficient_evidence"
+    label: str        # e.g. "Performance Improvement"
+    time_delta_seconds: Optional[float] = None
+    memory_delta_kb: Optional[int] = None
+    details: str
+
+
+class ProofReport(BaseModel):
+    id: str
+    timestamp: str
+    language: str
+    test_inputs: List[str] = []
+    source: Dict[str, SourceSnapshot]
+    execution_provider: ExecutionProviderInfo
+    executions: Dict[str, VersionExecutionReport]
+    correctness: CorrectnessEvidence
+    performance: PerformanceEvidence
+    missing_metrics: List[str] = []
+    limitations: List[str] = []
+    unresolved_risks: List[str] = []
+    secrets_redacted: bool = True
+
+
 class CompareResponse(BaseModel):
     correctness_verified: bool
     original: VersionResult
@@ -156,6 +207,7 @@ class CompareResponse(BaseModel):
     verdict: str          # "improvement" | "regression" | "equivalent" | "unverified" | "failed"
     explanation: str
     limitations: List[str] = []
+    proof_report: Optional[ProofReport] = None
 
 
 # ── Benchmark ─────────────────────────────────────────────────────────────────

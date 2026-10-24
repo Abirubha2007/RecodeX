@@ -13,6 +13,7 @@ from typing import List, Optional
 
 from app.schemas import CompareResponse, VersionResult
 from app.services.execution_service import execute_code
+from app.services.proof_service import generate_proof_report
 
 logger = logging.getLogger("recodex.compare")
 
@@ -61,6 +62,18 @@ async def compare_versions(
 
     # Configuration or execution failure
     if orig_result.status in ("configuration_error", "error", "timeout"):
+        report = generate_proof_report(
+            language=language,
+            original_code=original_code,
+            candidate_code=candidate_code,
+            test_inputs=test_inputs,
+            orig_vr=orig_vr,
+            cand_vr=cand_vr,
+            orig_raw=orig_result,
+            cand_raw=cand_result,
+            outputs_match=False,
+            base_limitations=limitations,
+        )
         return CompareResponse(
             correctness_verified=False,
             original=orig_vr,
@@ -70,9 +83,22 @@ async def compare_versions(
             explanation=f"Comparison incomplete: original execution failed ({orig_result.status}). "
                         f"{orig_result.message or ''}",
             limitations=limitations,
+            proof_report=report,
         )
 
     if cand_result.status in ("configuration_error", "error", "timeout"):
+        report = generate_proof_report(
+            language=language,
+            original_code=original_code,
+            candidate_code=candidate_code,
+            test_inputs=test_inputs,
+            orig_vr=orig_vr,
+            cand_vr=cand_vr,
+            orig_raw=orig_result,
+            cand_raw=cand_result,
+            outputs_match=False,
+            base_limitations=limitations,
+        )
         return CompareResponse(
             correctness_verified=False,
             original=orig_vr,
@@ -82,6 +108,7 @@ async def compare_versions(
             explanation=f"Candidate execution failed ({cand_result.status}). "
                         f"The optimization cannot be verified.",
             limitations=limitations,
+            proof_report=report,
         )
 
     outputs_match = (orig_result.stdout or "").strip() == (cand_result.stdout or "").strip()
@@ -114,6 +141,21 @@ async def compare_versions(
         verdict = "equivalent"
         explanation = "Both versions produce identical output. Runtime data not available from provider."
 
+    report = generate_proof_report(
+        language=language,
+        original_code=original_code,
+        candidate_code=candidate_code,
+        test_inputs=test_inputs,
+        orig_vr=orig_vr,
+        cand_vr=cand_vr,
+        orig_raw=orig_result,
+        cand_raw=cand_result,
+        outputs_match=outputs_match,
+        time_delta_seconds=time_delta,
+        memory_delta_kb=mem_delta,
+        base_limitations=limitations,
+    )
+
     return CompareResponse(
         correctness_verified=outputs_match,
         original=orig_vr,
@@ -124,4 +166,5 @@ async def compare_versions(
         verdict=verdict,
         explanation=explanation,
         limitations=limitations,
+        proof_report=report,
     )
