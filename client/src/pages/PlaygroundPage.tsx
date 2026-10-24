@@ -90,6 +90,7 @@ export function PlaygroundPage() {
   const consoleHeight = 220;
 
   useEffect(() => {
+    document.title = 'ReCodeX – Playground';
     api.languages().then(setLanguages).catch(() => {});
   }, []);
 

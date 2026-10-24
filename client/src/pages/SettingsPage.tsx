@@ -54,9 +54,9 @@ export function SettingsPage() {
                 name="Code Execution"
                 enabled={health.features.execution}
                 enabledMsg="Execution provider is configured and ready."
-                disabledMsg="Set JUDGE0_BASE_URL in your .env file. You can use a self-hosted Judge0 instance or a compatible service."
-                link="https://judge0.com"
-                linkLabel="Judge0 Documentation"
+                disabledMsg="Set ONLINECOMPILER_API_KEY in your .env file. Get a free API key at api.onlinecompiler.io."
+                link="https://api.onlinecompiler.io"
+                linkLabel="OnlineCompiler Documentation"
               />
               <FeatureRow
                 name="AI Assistant (Groq)"
@@ -88,8 +88,9 @@ export function SettingsPage() {
 {`GROQ_API_KEY=gsk_...
 GROQ_MODEL=llama-3.3-70b-versatile
 
-JUDGE0_BASE_URL=https://your-judge0-instance.com
-JUDGE0_API_KEY=  # leave empty if not required`}
+EXECUTION_PROVIDER=onlinecompiler
+ONLINECOMPILER_BASE_URL=https://api.onlinecompiler.io
+ONLINECOMPILER_API_KEY=your_key_here`}
               </pre>
               <p className="text-muted mt-3">
                 Secrets are never logged, exposed to the browser, or sent to the AI provider.
