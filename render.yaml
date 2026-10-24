@@ -1,0 +1,48 @@
+services:
+  # ── Backend API ──────────────────────────────────────────────────────────────
+  - type: web
+    name: recodex-api
+    runtime: python
+    rootDir: server
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: GROQ_API_KEY
+        sync: false          # set in Render dashboard
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: CORS_ORIGINS
+        value: '["https://recodex-client.onrender.com"]'
+      - key: EXECUTION_PROVIDER
+        value: judge0
+      - key: JUDGE0_BASE_URL
+        sync: false          # set in Render dashboard
+      - key: JUDGE0_API_KEY
+        sync: false          # set in Render dashboard
+      - key: EXECUTION_TIMEOUT_SECONDS
+        value: "5"
+      - key: MAX_CODE_SIZE_KB
+        value: "100"
+      - key: MAX_OUTPUT_SIZE_KB
+        value: "256"
+
+  # ── Frontend static site ──────────────────────────────────────────────────────
+  - type: web
+    name: recodex-client
+    runtime: static
+    rootDir: client
+    buildCommand: npm ci --legacy-peer-deps && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
