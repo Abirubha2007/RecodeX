@@ -48,7 +48,7 @@ def _build_headers(api_key: Optional[str]) -> Dict[str, str]:
         "Accept": "application/json",
     }
     if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+        headers["Authorization"] = api_key
         headers["X-Auth-Token"] = api_key
     return headers
 
@@ -111,11 +111,12 @@ async def execute_code(
     headers = _build_headers(settings.ONLINECOMPILER_API_KEY)
 
     try:
-        async with httpx.AsyncClient(timeout=float(timeout_seconds + 5)) as client:
+        client_timeout = max(30.0, float(timeout_seconds + 10))
+        async with httpx.AsyncClient(timeout=client_timeout) as client:
             resp = await client.post(url, json=payload, headers=headers)
 
-        if resp.status_code == 401:
-            logger.warning("OnlineCompiler.io authentication failed (HTTP 401)")
+        if resp.status_code in (401, 403) or (resp.status_code == 404 and "invalid" in resp.text.lower()):
+            logger.warning("OnlineCompiler.io authentication failed (HTTP %d)", resp.status_code)
             return ExecuteResponse(
                 status="error",
                 message="Authentication failed with OnlineCompiler.io. Check ONLINECOMPILER_API_KEY in your .env file.",
