@@ -129,6 +129,17 @@ code, pre {
   color: var(--color-primary);
 }
 
+.btn-outline {
+  background: transparent;
+  color: var(--color-body);
+  border-color: var(--color-border-strong);
+}
+.btn-outline:hover:not(:disabled) {
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--color-muted);
@@ -738,11 +749,15 @@ code, pre {
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   max-width: 960px;
   margin: 60px auto 0;
   padding: 0 24px;
+}
+
+@media (max-width: 768px) {
+  .features-grid { grid-template-columns: 1fr; }
 }
 
 .feature-card {
@@ -800,3 +815,19 @@ code, pre {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
+
+/* ── Landing footer ─────────────────────────────────────────────────────────── */
+.landing-footer {
+  border-top: 1px solid var(--color-border);
+  padding: 20px 48px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 80px;
+  background: var(--color-surface);
+}
+
+@media (max-width: 640px) {
+  .landing-footer { padding: 16px 20px; flex-direction: column; align-items: flex-start; }
+}

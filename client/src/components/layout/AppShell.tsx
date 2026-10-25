@@ -2,16 +2,18 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import {
   Code2, BarChart2, GitCompare, Gauge, Settings,
-  ChevronLeft, ChevronRight, Zap, ShieldCheck
+  ChevronLeft, ChevronRight, FileCheck,
 } from 'lucide-react';
 import { api } from '@/services/api';
 import type { HealthResponse } from '@/types/api';
+import { HexIcon, ReCodeXLogo } from './ReCodeXLogo';
 
 const NAV_ITEMS = [
-  { to: '/playground', icon: Code2,       label: 'Playground' },
-  { to: '/analysis',   icon: BarChart2,   label: 'Code Analysis' },
-  { to: '/green-diff', icon: ShieldCheck, label: 'Proof Report' },
-  { to: '/benchmark',  icon: Gauge,       label: 'Benchmark' },
+  { to: '/playground',   icon: Code2,      label: 'Playground' },
+  { to: '/analysis',     icon: BarChart2,  label: 'Code Analysis' },
+  { to: '/green-diff',   icon: GitCompare, label: 'Green Diff' },
+  { to: '/proof-report', icon: FileCheck,  label: 'Proof Report' },
+  { to: '/benchmark',    icon: Gauge,      label: 'Benchmark' },
 ];
 
 export function AppShell() {
@@ -27,16 +29,20 @@ export function AppShell() {
   return (
     <div className="app-shell">
       {/* Sidebar */}
-      <nav className={`app-sidebar${collapsed ? ' collapsed' : ''}`} role="navigation" aria-label="Main navigation">
+      <nav
+        className={`app-sidebar${collapsed ? ' collapsed' : ''}`}
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        {/* Logo area */}
         <div className="sidebar-logo">
-          <div className="logo-icon">
-            <Zap size={18} strokeWidth={2.5} />
-          </div>
-          {!collapsed && (
-            <span className="logo-text">Re<span>Code</span>X</span>
-          )}
+          {collapsed
+            ? <HexIcon size={30} />
+            : <ReCodeXLogo wordmark iconSize={30} />
+          }
         </div>
 
+        {/* Nav links */}
         <div className="sidebar-nav">
           {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
             <NavLink
@@ -53,8 +59,8 @@ export function AppShell() {
           ))}
         </div>
 
+        {/* Footer: status + settings + collapse */}
         <div className="sidebar-footer">
-          {/* Status indicator */}
           {!collapsed && health && (
             <div className="flex items-center gap-2 text-xs text-muted mb-3" style={{ padding: '4px 10px' }}>
               <span
@@ -94,7 +100,7 @@ export function AppShell() {
         </div>
       </nav>
 
-      {/* Main */}
+      {/* Main content */}
       <main className="app-main">
         <Outlet />
       </main>

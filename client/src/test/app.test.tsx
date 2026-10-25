@@ -90,10 +90,13 @@ import { LandingPage } from '@/pages/LandingPage';
 import { AnalysisPage } from '@/pages/AnalysisPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { GreenDiffPage } from '@/pages/GreenDiffPage';
+import { ProofReportPage } from '@/pages/ProofReportPage';
+import { proofReportStore } from '@/services/proofReportStore';
 import { api } from '@/services/api';
 import type { ProofReport } from '@/types/api';
 
-// ── Landing Page ──────────────────────────────────────────────────────────────
+
+// â”€â”€ Landing Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe('LandingPage', () => {
   it('renders hero title and tagline', () => {
@@ -102,7 +105,7 @@ describe('LandingPage', () => {
         <LandingPage />
       </MemoryRouter>
     );
-    expect(screen.getByText(/Write\. Run\. Optimize\. Evolve\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Write.*Run.*Optimize.*Verify/i)).toBeInTheDocument();
   });
 
   it('renders Open Playground CTA button', () => {
@@ -126,7 +129,7 @@ describe('LandingPage', () => {
   });
 });
 
-// ── Analysis Page ─────────────────────────────────────────────────────────────
+// â”€â”€ Analysis Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe('AnalysisPage', () => {
   beforeEach(() => {
@@ -144,7 +147,7 @@ describe('AnalysisPage', () => {
         },
       ],
       complexity: {
-        estimated_time_complexity: 'O(n²)',
+        estimated_time_complexity: 'O(nÂ²)',
         estimated_auxiliary_space: 'O(1)',
         confidence: 'medium',
         reasoning: 'Two nested loops.',
@@ -178,7 +181,7 @@ describe('AnalysisPage', () => {
     fireEvent.click(btn);
 
     await waitFor(() => {
-      expect(screen.getByText('O(n²)')).toBeInTheDocument();
+      expect(screen.getByText('O(nÂ²)')).toBeInTheDocument();
     });
   });
 
@@ -199,7 +202,7 @@ describe('AnalysisPage', () => {
   });
 });
 
-// ── Settings Page ─────────────────────────────────────────────────────────────
+// â”€â”€ Settings Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe('SettingsPage', () => {
   it('shows loading state initially', async () => {
@@ -250,7 +253,7 @@ describe('SettingsPage', () => {
   });
 });
 
-// ── API service ───────────────────────────────────────────────────────────────
+// â”€â”€ API service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe('api service', () => {
   it('is exported', () => {
@@ -265,7 +268,7 @@ describe('api service', () => {
   });
 });
 
-// ── Green Diff Page ───────────────────────────────────────────────────────────
+// â”€â”€ Green Diff Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe('GreenDiffPage', () => {
   beforeEach(() => {
@@ -420,9 +423,37 @@ describe('GreenDiffPage', () => {
       expect(screen.getByText('0.020s')).toBeInTheDocument();
     });
   });
+
+  it('publishes proof report to the store and shows link to Proof Report page', async () => {
+    proofReportStore.set(null);
+    const mockProof = makeProofReport();
+    vi.spyOn(api, 'compare').mockResolvedValue({
+      correctness_verified: true,
+      original: { status: 'accepted', stdout: '1 2 3\n', time_seconds: 0.05, memory_kb: 12000 },
+      candidate: { status: 'accepted', stdout: '1 2 3\n', time_seconds: 0.02, memory_kb: 11000 },
+      outputs_match: true,
+      time_delta_seconds: -0.03,
+      verdict: 'improvement',
+      explanation: 'Faster.',
+      limitations: [],
+      proof_report: mockProof,
+    });
+
+    render(<MemoryRouter><GreenDiffPage /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /verify & compare/i }));
+
+    await waitFor(() => {
+      // Should show the proof report navigation alert/button
+      expect(screen.getByText(/Proof Report generated/i)).toBeInTheDocument();
+    });
+
+    // Store should have been populated
+    expect(proofReportStore.get()).not.toBeNull();
+    expect(proofReportStore.get()?.id).toBe('proof_abcdef1234567890');
+  });
 });
 
-// ── Proof Report Card ─────────────────────────────────────────────────────────
+// ── makeProofReport factory ───────────────────────────────────────────────────
 
 const makeProofReport = (overrides: Partial<ProofReport> = {}): ProofReport => ({
   id: 'proof_abcdef1234567890',
@@ -447,211 +478,99 @@ const makeProofReport = (overrides: Partial<ProofReport> = {}): ProofReport => (
   ...overrides,
 });
 
-describe('Proof Report Card', () => {
+// ── Proof Report Page ─────────────────────────────────────────────────────────
+
+describe('ProofReportPage', () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    proofReportStore.set(null);
     vi.restoreAllMocks();
   });
 
-  it('renders proof report card with ID and timestamp after successful compare', async () => {
-    vi.spyOn(api, 'compare').mockResolvedValue({
-      correctness_verified: true,
-      original: { status: 'accepted', stdout: '1 2 3\n', time_seconds: 0.05, memory_kb: 12000 },
-      candidate: { status: 'accepted', stdout: '1 2 3\n', time_seconds: 0.02, memory_kb: 11000 },
-      outputs_match: true,
-      time_delta_seconds: -0.03,
-      memory_delta_kb: -1000,
-      verdict: 'improvement',
-      explanation: 'Faster by 0.030s.',
-      limitations: [],
-      proof_report: makeProofReport(),
-    });
-
-    render(<MemoryRouter><GreenDiffPage /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /verify & compare/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('proof-report-card')).toBeInTheDocument();
-    });
-
-    expect(screen.getByText('Proof Report')).toBeInTheDocument();
-    expect(screen.getByText('proof_abcdef1234567890')).toBeInTheDocument();
+  it('shows empty state with link to Green Diff when no report is available', () => {
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
+    expect(screen.getByText(/No Proof Report yet/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /go to green diff/i })).toBeInTheDocument();
   });
 
-  it('shows verified correctness badge and improvement performance badge', async () => {
-    vi.spyOn(api, 'compare').mockResolvedValue({
-      correctness_verified: true,
-      original: { status: 'accepted', stdout: '1 2 3\n', time_seconds: 0.05, memory_kb: 12000 },
-      candidate: { status: 'accepted', stdout: '1 2 3\n', time_seconds: 0.02, memory_kb: 11000 },
-      outputs_match: true,
-      time_delta_seconds: -0.03,
-      memory_delta_kb: -1000,
-      verdict: 'improvement',
-      explanation: 'Faster.',
-      limitations: [],
-      proof_report: makeProofReport(),
-    });
+  it('shows report ID, timestamp, and metadata when a report is in the store', () => {
+    proofReportStore.set(makeProofReport());
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
+    expect(screen.getByText('proof_abcdef1234567890')).toBeInTheDocument();
+    expect(screen.getByText(/2026-10-24T14:00:00Z/)).toBeInTheDocument();
+    expect(screen.getByText(/onlinecompiler/i)).toBeInTheDocument();
+  });
 
-    render(<MemoryRouter><GreenDiffPage /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /verify & compare/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('proof-report-card')).toBeInTheDocument();
-    });
-
+  it('shows verified correctness badge', () => {
+    proofReportStore.set(makeProofReport());
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
     expect(screen.getByText('Verified for tested cases')).toBeInTheDocument();
+  });
+
+  it('shows performance badge for improvement', () => {
+    proofReportStore.set(makeProofReport());
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
     expect(screen.getByText('Performance Improvement')).toBeInTheDocument();
   });
 
-  it('shows failed correctness badge when outputs do not match', async () => {
-    vi.spyOn(api, 'compare').mockResolvedValue({
-      correctness_verified: false,
-      original: { status: 'accepted', stdout: '1 2 3\n', time_seconds: 0.05, memory_kb: 12000 },
-      candidate: { status: 'accepted', stdout: '3 1 2\n', time_seconds: 0.02, memory_kb: 11000 },
-      outputs_match: false,
-      verdict: 'failed',
-      explanation: 'Outputs differ.',
-      limitations: [],
-      proof_report: makeProofReport({
-        correctness: { status: 'failed' as const, label: 'Failed', outputs_match: false, details: 'Outputs differ.' },
-        performance: { verdict: 'insufficient_evidence' as const, label: 'Insufficient Evidence', details: 'Cannot assess.' },
-      }),
-    });
-
-    render(<MemoryRouter><GreenDiffPage /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /verify & compare/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('proof-report-card')).toBeInTheDocument();
-    });
-
-    expect(screen.getByText('Failed')).toBeInTheDocument();
-    expect(screen.getByText('Insufficient Evidence')).toBeInTheDocument();
-  });
-
-  it('displays SHA-256 hashes for original and candidate sources', async () => {
-    vi.spyOn(api, 'compare').mockResolvedValue({
-      correctness_verified: true,
-      original: { status: 'accepted', stdout: 'ok\n', time_seconds: 0.05, memory_kb: 12000 },
-      candidate: { status: 'accepted', stdout: 'ok\n', time_seconds: 0.02, memory_kb: 11000 },
-      outputs_match: true,
-      verdict: 'improvement',
-      explanation: 'Faster.',
-      limitations: [],
-      proof_report: makeProofReport(),
-    });
-
-    render(<MemoryRouter><GreenDiffPage /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /verify & compare/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('proof-report-card')).toBeInTheDocument();
-    });
-
+  it('shows SHA-256 hashes for original and candidate', () => {
+    proofReportStore.set(makeProofReport());
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
     expect(screen.getByText(/Original SHA-256/i)).toBeInTheDocument();
     expect(screen.getByText(/Candidate SHA-256/i)).toBeInTheDocument();
     expect(screen.getByText('aaa111')).toBeInTheDocument();
     expect(screen.getByText('bbb222')).toBeInTheDocument();
   });
 
-  it('shows missing metrics section when present', async () => {
-    vi.spyOn(api, 'compare').mockResolvedValue({
-      correctness_verified: false,
-      original: { status: 'accepted', stdout: 'ok\n' },
-      candidate: { status: 'accepted', stdout: 'ok\n' },
-      outputs_match: true,
-      verdict: 'unverified',
-      explanation: 'Incomplete.',
-      limitations: [],
-      proof_report: makeProofReport({
-        missing_metrics: ['execution time not available', 'memory usage not reported'],
-        correctness: { status: 'unverified' as const, label: 'Unverified', outputs_match: true, details: 'Missing data.' },
-        performance: { verdict: 'insufficient_evidence' as const, label: 'Insufficient Evidence', details: 'No timing data.' },
-      }),
-    });
-
-    render(<MemoryRouter><GreenDiffPage /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /verify & compare/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('proof-report-card')).toBeInTheDocument();
-    });
-
+  it('shows missing metrics when present', () => {
+    proofReportStore.set(makeProofReport({
+      missing_metrics: ['execution time not available', 'memory usage not reported'],
+    }));
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
     expect(screen.getByText('Missing Evidence Metrics')).toBeInTheDocument();
     expect(screen.getByText('execution time not available')).toBeInTheDocument();
     expect(screen.getByText('memory usage not reported')).toBeInTheDocument();
   });
 
-  it('shows unresolved risks section when present', async () => {
-    vi.spyOn(api, 'compare').mockResolvedValue({
-      correctness_verified: true,
-      original: { status: 'accepted', stdout: 'ok\n', time_seconds: 0.05, memory_kb: 12000 },
-      candidate: { status: 'accepted', stdout: 'ok\n', time_seconds: 0.02, memory_kb: 11000 },
-      outputs_match: true,
-      verdict: 'improvement',
-      explanation: 'Faster.',
-      limitations: [],
-      proof_report: makeProofReport({
-        unresolved_risks: ['Only one test case evaluated.', 'External I/O not tested.'],
-      }),
-    });
-
-    render(<MemoryRouter><GreenDiffPage /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /verify & compare/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('proof-report-card')).toBeInTheDocument();
-    });
-
+  it('shows unresolved risks when present', () => {
+    proofReportStore.set(makeProofReport({
+      unresolved_risks: ['Only one test case evaluated.', 'External I/O not tested.'],
+    }));
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
     expect(screen.getByText('Unresolved Risks')).toBeInTheDocument();
     expect(screen.getByText('Only one test case evaluated.')).toBeInTheDocument();
     expect(screen.getByText('External I/O not tested.')).toBeInTheDocument();
   });
 
-  it('Export JSON button triggers a download with proof report data', async () => {
-    const mockProof = makeProofReport();
-    vi.spyOn(api, 'compare').mockResolvedValue({
-      correctness_verified: true,
-      original: { status: 'accepted', stdout: 'ok\n', time_seconds: 0.05, memory_kb: 12000 },
-      candidate: { status: 'accepted', stdout: 'ok\n', time_seconds: 0.02, memory_kb: 11000 },
-      outputs_match: true,
-      verdict: 'improvement',
-      explanation: 'Faster.',
-      limitations: [],
-      proof_report: mockProof,
-    });
+  it('shows failed correctness badge when outputs do not match', () => {
+    proofReportStore.set(makeProofReport({
+      correctness: { status: 'failed' as const, label: 'Failed', outputs_match: false, details: 'Outputs differ.' },
+      performance: { verdict: 'insufficient_evidence' as const, label: 'Insufficient Evidence', details: 'Cannot assess.' },
+    }));
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+    expect(screen.getByText('Insufficient Evidence')).toBeInTheDocument();
+  });
 
-    // Mock URL.createObjectURL and anchor click to capture export data
-    const createdURLs: string[] = [];
-    const originalCreate = URL.createObjectURL;
-    URL.createObjectURL = vi.fn(() => {
-      createdURLs.push('mock-url');
-      return 'mock-url';
-    });
+  it('Download HTML button triggers a download and Download JSON is removed', async () => {
+    proofReportStore.set(makeProofReport());
+    URL.createObjectURL = vi.fn(() => 'mock-url');
     URL.revokeObjectURL = vi.fn();
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-    render(<MemoryRouter><GreenDiffPage /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /verify & compare/i }));
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
+    expect(screen.queryByRole('button', { name: /download json/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /download html/i }));
 
     await waitFor(() => {
-      expect(screen.getByTestId('proof-report-card')).toBeInTheDocument();
+      expect(URL.createObjectURL).toHaveBeenCalled();
+      expect(clickSpy).toHaveBeenCalled();
     });
-
-    const exportJsonBtn = screen.getByRole('button', { name: /export json/i });
-    fireEvent.click(exportJsonBtn);
-
-    expect(URL.createObjectURL).toHaveBeenCalled();
-    expect(clickSpy).toHaveBeenCalled();
-
-    // Restore
-    URL.createObjectURL = originalCreate;
     clickSpy.mockRestore();
   });
 
-  it('exported JSON does not contain API key patterns', async () => {
+  it('exported JSON does not contain API key patterns', () => {
     const mockProof = makeProofReport();
-    // Verify the proof report object has no credential-like keys
     const jsonStr = JSON.stringify(mockProof);
     expect(jsonStr).not.toMatch(/sk-[a-zA-Z0-9]/);
     expect(jsonStr).not.toMatch(/GROQ_API_KEY/i);
@@ -660,29 +579,78 @@ describe('Proof Report Card', () => {
     expect(mockProof.secrets_redacted).toBe(true);
   });
 
-  it('provider identity and secrets_redacted flag are shown in the card', async () => {
+  it('shows secrets_redacted indicator in metadata', () => {
+    proofReportStore.set(makeProofReport());
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
+    expect(screen.getByText(/Secrets redacted/i)).toBeInTheDocument();
+  });
+
+  it('shows the disclaimer about limitations of proof', () => {
+    proofReportStore.set(makeProofReport());
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
+    expect(screen.getByText(/not.*formal mathematical proof/i)).toBeInTheDocument();
+  });
+
+  it('updates when the store emits a new report', async () => {
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
+    expect(screen.getByText(/No Proof Report yet/i)).toBeInTheDocument();
+    proofReportStore.set(makeProofReport());
+    await waitFor(() => {
+      expect(screen.getByText('proof_abcdef1234567890')).toBeInTheDocument();
+    });
+  });
+});
+
+// ── GreenDiff: publishes to store ────────────────────────────────────────────
+
+describe('GreenDiff publishes proof report to store', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    proofReportStore.set(null);
+    vi.restoreAllMocks();
+  });
+
+  it('publishes proof report to the store and shows link to Proof Report page', async () => {
+    const mockProof = makeProofReport();
     vi.spyOn(api, 'compare').mockResolvedValue({
       correctness_verified: true,
-      original: { status: 'accepted', stdout: 'ok\n', time_seconds: 0.05, memory_kb: 12000 },
-      candidate: { status: 'accepted', stdout: 'ok\n', time_seconds: 0.02, memory_kb: 11000 },
+      original: { status: 'accepted', stdout: '1 2 3\n', time_seconds: 0.05, memory_kb: 12000 },
+      candidate: { status: 'accepted', stdout: '1 2 3\n', time_seconds: 0.02, memory_kb: 11000 },
       outputs_match: true,
+      time_delta_seconds: -0.03,
       verdict: 'improvement',
       explanation: 'Faster.',
       limitations: [],
-      proof_report: makeProofReport(),
+      proof_report: mockProof,
     });
 
     render(<MemoryRouter><GreenDiffPage /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: /verify & compare/i }));
 
     await waitFor(() => {
-      expect(screen.getByTestId('proof-report-card')).toBeInTheDocument();
+      expect(screen.getByText(/Proof Report generated/i)).toBeInTheDocument();
     });
 
-    // Provider identity
-    expect(screen.getByText(/onlinecompiler/i)).toBeInTheDocument();
-    // Secrets redacted indicator
-    expect(screen.getByText(/Secrets Redacted/i)).toBeInTheDocument();
+    expect(proofReportStore.get()).not.toBeNull();
+    expect(proofReportStore.get()?.id).toBe('proof_abcdef1234567890');
   });
 });
 
+// ── Navigation separation ─────────────────────────────────────────────────────
+
+describe('Navigation: Green Diff and Proof Report are separate', () => {
+  beforeEach(() => { proofReportStore.set(null); });
+
+  it('GreenDiffPage does not render Download JSON or Download HTML buttons', () => {
+    render(<MemoryRouter><GreenDiffPage /></MemoryRouter>);
+    expect(screen.queryByRole('button', { name: /download json/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /download html/i })).not.toBeInTheDocument();
+  });
+
+  it('ProofReportPage does not render a code diff editor or Verify button', () => {
+    proofReportStore.set(makeProofReport());
+    render(<MemoryRouter><ProofReportPage /></MemoryRouter>);
+    expect(screen.queryByTestId('diff-editor')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /verify & compare/i })).not.toBeInTheDocument();
+  });
+});

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="ReCodeX hexagon icon">
+  <defs>
+    <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="50%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#065f46"/>
+    </linearGradient>
+    <linearGradient id="facetGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#065f46" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- Hexagon body -->
+  <polygon
+    points="32,3 57,17.5 57,46.5 32,61 7,46.5 7,17.5"
+    fill="url(#hexGrad)"
+  />
+  <!-- Subtle top-left facet highlight -->
+  <polygon
+    points="32,3 57,17.5 32,32 7,17.5"
+    fill="url(#facetGrad)"
+    opacity="0.4"
+  />
+  <!-- Bracket: < -->
+  <path d="M20 32 L27 24 L27 27.5 L23.5 32 L27 36.5 L27 40 Z" fill="white" stroke="none"/>
+  <!-- Bracket: > -->
+  <path d="M44 32 L37 24 L37 27.5 L40.5 32 L37 36.5 L37 40 Z" fill="white" stroke="none"/>
+  <!-- Slash: / -->
+  <rect x="29.5" y="22" width="5" height="20" rx="2" transform="rotate(-15 32 32)" fill="white" opacity="0.92"/>
+</svg>

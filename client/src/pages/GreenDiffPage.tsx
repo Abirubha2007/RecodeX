@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
+import { useNavigate } from 'react-router-dom';
 import {
   GitCompare,
   Play,
@@ -7,13 +8,11 @@ import {
   XCircle,
   AlertTriangle,
   Info,
-  Download,
-  FileText,
-  ShieldCheck,
-  Copy,
-  Check,
+  FileCheck,
+  ArrowRight,
 } from 'lucide-react';
 import { api } from '@/services/api';
+import { proofReportStore } from '@/services/proofReportStore';
 import type { CompareResponse } from '@/types/api';
 
 const DEFAULT_ORIGINAL_PYTHON = `# Original Code (O(n^2) Bubble Sort)
@@ -46,25 +45,21 @@ const VERDICT_STYLES = {
 };
 
 export function GreenDiffPage() {
-  const [language, setLanguage] = useState(() => {
-    return sessionStorage.getItem('greenDiffLanguage') || 'python';
-  });
+  const navigate = useNavigate();
+
+  const [language, setLanguage] = useState(() =>
+    sessionStorage.getItem('greenDiffLanguage') || 'python'
+  );
 
   const [original, setOriginal] = useState(() => {
     const stored = sessionStorage.getItem('greenDiffOriginal');
-    if (stored) {
-      sessionStorage.removeItem('greenDiffOriginal');
-      return stored;
-    }
+    if (stored) { sessionStorage.removeItem('greenDiffOriginal'); return stored; }
     return DEFAULT_ORIGINAL_PYTHON;
   });
 
   const [candidate, setCandidate] = useState(() => {
     const stored = sessionStorage.getItem('greenDiffCandidate');
-    if (stored) {
-      sessionStorage.removeItem('greenDiffCandidate');
-      return stored;
-    }
+    if (stored) { sessionStorage.removeItem('greenDiffCandidate'); return stored; }
     return DEFAULT_CANDIDATE_PYTHON;
   });
 
@@ -72,77 +67,10 @@ export function GreenDiffPage() {
   const [result, setResult] = useState<CompareResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const diffEditorRef = useRef<any>(null);
   const initialOriginalRef = useRef(original);
   const initialCandidateRef = useRef(candidate);
-
-  const handleExportJson = useCallback(() => {
-    if (!result?.proof_report) return;
-    const jsonStr = JSON.stringify(result.proof_report, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `proof-report-${result.proof_report.id}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [result]);
-
-  const handleExportHtml = useCallback(async () => {
-    if (!result?.proof_report) return;
-    const origCode = (
-      diffEditorRef.current?.getOriginalEditor()?.getModel()?.getValue() ??
-      diffEditorRef.current?.getOriginalEditor()?.getValue?.() ??
-      original
-    ).trim();
-    const candCode = (
-      diffEditorRef.current?.getModifiedEditor()?.getModel()?.getValue() ??
-      diffEditorRef.current?.getModifiedEditor()?.getValue?.() ??
-      candidate
-    ).trim();
-
-    try {
-      const htmlContent = await api.compareReportHtml({
-        language,
-        original_code: origCode,
-        candidate_code: candCode,
-        test_inputs: testInput ? [testInput] : [],
-      });
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `proof-report-${result.proof_report.id}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch {
-      // Offline fallback: generate client-side HTML report
-      const rep = result.proof_report;
-      const htmlDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Proof Report ${rep.id}</title><style>body{font-family:sans-serif;margin:40px;background:#f9fafb;color:#111827}.card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:24px;max-width:850px;margin:0 auto}pre{background:#1e1e1e;color:#ddd;padding:12px;border-radius:6px;overflow-x:auto}</style></head><body><div class="card"><h1>ReCodeX Proof Report – ${rep.id}</h1><p>Timestamp: ${rep.timestamp} | Language: ${rep.language} | Provider: ${rep.execution_provider.provider}</p><p><strong>Correctness:</strong> ${rep.correctness.label} (${rep.correctness.details})</p><p><strong>Performance:</strong> ${rep.performance.label} (${rep.performance.details})</p><hr><p>Original SHA-256: <code>${rep.source.original.sha256}</code></p><p>Candidate SHA-256: <code>${rep.source.candidate.sha256}</code></p><h3>Original Source</h3><pre>${rep.source.original.code}</pre><h3>Candidate Source</h3><pre>${rep.source.candidate.code}</pre></div></body></html>`;
-      const blob = new Blob([htmlDoc], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `proof-report-${rep.id}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-  }, [result, language, original, candidate, testInput]);
-
-  const handleCopyJson = useCallback(async () => {
-    if (!result?.proof_report) return;
-    await navigator.clipboard.writeText(JSON.stringify(result.proof_report, null, 2));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [result]);
 
   const handleCompare = useCallback(async () => {
     const origEditor = diffEditorRef.current?.getOriginalEditor();
@@ -150,21 +78,14 @@ export function GreenDiffPage() {
     const origCode = (origEditor?.getModel()?.getValue() ?? origEditor?.getValue?.() ?? original).trim();
     const candCode = (candEditor?.getModel()?.getValue() ?? candEditor?.getValue?.() ?? candidate).trim();
 
-    if (!origCode && !candCode) {
-      setError('Please provide both original and candidate code.');
-      return;
-    }
-    if (!origCode) {
-      setError('Original code cannot be empty.');
-      return;
-    }
-    if (!candCode) {
-      setError('Optimized candidate code cannot be empty.');
-      return;
-    }
+    if (!origCode && !candCode) { setError('Please provide both original and candidate code.'); return; }
+    if (!origCode)              { setError('Original code cannot be empty.'); return; }
+    if (!candCode)              { setError('Optimized candidate code cannot be empty.'); return; }
 
     setLoading(true);
     setError(null);
+    proofReportStore.set(null); // clear stale report before new run
+
     try {
       const r = await api.compare({
         language,
@@ -173,6 +94,10 @@ export function GreenDiffPage() {
         test_inputs: testInput ? [testInput] : [],
       });
       setResult(r);
+      // Publish proof report to the store so ProofReportPage can read it
+      if (r.proof_report) {
+        proofReportStore.set(r.proof_report);
+      }
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -181,15 +106,16 @@ export function GreenDiffPage() {
   }, [language, original, candidate, testInput]);
 
   const verdict = result?.verdict as keyof typeof VERDICT_STYLES | undefined;
-  const vStyle = verdict ? VERDICT_STYLES[verdict] : null;
-  const VIcon = vStyle?.icon;
+  const vStyle  = verdict ? VERDICT_STYLES[verdict] : null;
+  const VIcon   = vStyle?.icon;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      {/* Toolbar */}
+      {/* ── Toolbar ──────────────────────────────────────────────────── */}
       <div className="diff-toolbar">
         <GitCompare size={18} style={{ color: 'var(--color-primary)' }} />
         <span style={{ fontWeight: 600, color: 'var(--color-heading)' }}>Green Diff</span>
+
         <select
           id="diff-lang-select"
           className="select"
@@ -201,6 +127,7 @@ export function GreenDiffPage() {
             <option key={l} value={l}>{l}</option>
           ))}
         </select>
+
         <input
           id="diff-test-input"
           className="input"
@@ -209,6 +136,7 @@ export function GreenDiffPage() {
           value={testInput}
           onChange={e => setTestInput(e.target.value)}
         />
+
         <button
           id="compare-btn"
           className="btn btn-primary"
@@ -218,12 +146,26 @@ export function GreenDiffPage() {
           {loading ? <span className="spinner" /> : <Play size={15} />}
           {loading ? 'Comparing…' : 'Verify & Compare'}
         </button>
+
+        {result?.proof_report && (
+          <button
+            id="view-proof-report-btn"
+            className="btn btn-secondary btn-sm"
+            onClick={() => navigate('/proof-report')}
+            title="View the full Proof Report"
+          >
+            <FileCheck size={14} />
+            Proof Report
+            <ArrowRight size={13} />
+          </button>
+        )}
+
         <span className="text-xs text-muted" style={{ marginLeft: 'auto' }}>
-          Both versions are executed with identical inputs
+          Both versions executed with identical inputs
         </span>
       </div>
 
-      {/* Diff editor label bar */}
+      {/* ── Editor label bar ─────────────────────────────────────────── */}
       <div style={{
         display: 'flex',
         borderBottom: '1px solid var(--color-border)',
@@ -242,14 +184,14 @@ export function GreenDiffPage() {
         </div>
       </div>
 
-      {/* DiffEditor */}
+      {/* ── Diff editor ──────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <DiffEditor
           height="100%"
-          language={language === 'cpp' ? 'cpp' : language}
+          language={language}
           original={initialOriginalRef.current}
           modified={initialCandidateRef.current}
-          onMount={(editor) => {
+          onMount={editor => {
             diffEditorRef.current = editor;
             const origModel = editor.getOriginalEditor().getModel();
             const modModel  = editor.getModifiedEditor().getModel();
@@ -271,12 +213,13 @@ export function GreenDiffPage() {
         />
       </div>
 
-      {/* Results */}
+      {/* ── Results ──────────────────────────────────────────────────── */}
       {(result || error) && (
-        <div className="diff-results" style={{ maxHeight: 280, overflow: 'auto' }}>
+        <div className="diff-results" style={{ maxHeight: 260, overflow: 'auto' }}>
           {error && (
             <div className="alert alert-error"><XCircle size={16} />{error}</div>
           )}
+
           {result && vStyle && VIcon && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {/* Verdict */}
@@ -288,26 +231,29 @@ export function GreenDiffPage() {
                 </div>
               </div>
 
-              {/* Metrics */}
+              {/* Metrics row */}
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                <div className="card" style={{ padding: '12px 16px', flex: '1 1 180px' }}>
+                {/* Original */}
+                <div className="card" style={{ padding: '12px 16px', flex: '1 1 160px' }}>
                   <div className="text-xs text-muted mb-2">Original</div>
                   <div className="text-sm">
                     <div>Status: <strong>{result.original.status}</strong></div>
                     {result.original.time_seconds != null && <div>Time: <strong>{result.original.time_seconds.toFixed(3)}s</strong></div>}
-                    {result.original.memory_kb != null && <div>Memory: <strong>{result.original.memory_kb} KB</strong></div>}
+                    {result.original.memory_kb    != null && <div>Memory: <strong>{result.original.memory_kb} KB</strong></div>}
                   </div>
                 </div>
-                <div className="card" style={{ padding: '12px 16px', flex: '1 1 180px' }}>
+                {/* Candidate */}
+                <div className="card" style={{ padding: '12px 16px', flex: '1 1 160px' }}>
                   <div className="text-xs text-muted mb-2">Candidate</div>
                   <div className="text-sm">
                     <div>Status: <strong>{result.candidate.status}</strong></div>
                     {result.candidate.time_seconds != null && <div>Time: <strong>{result.candidate.time_seconds.toFixed(3)}s</strong></div>}
-                    {result.candidate.memory_kb != null && <div>Memory: <strong>{result.candidate.memory_kb} KB</strong></div>}
+                    {result.candidate.memory_kb    != null && <div>Memory: <strong>{result.candidate.memory_kb} KB</strong></div>}
                   </div>
                 </div>
+                {/* Delta */}
                 {(result.time_delta_seconds != null || result.memory_delta_kb != null) && (
-                  <div className="card" style={{ padding: '12px 16px', flex: '1 1 180px' }}>
+                  <div className="card" style={{ padding: '12px 16px', flex: '1 1 160px' }}>
                     <div className="text-xs text-muted mb-2">Delta</div>
                     <div className="text-sm">
                       {result.time_delta_seconds != null && (
@@ -323,7 +269,7 @@ export function GreenDiffPage() {
                 )}
               </div>
 
-              {/* Outputs */}
+              {/* Output mismatch warning */}
               {!result.outputs_match && (
                 <div className="alert alert-error">
                   <XCircle size={14} />
@@ -341,165 +287,20 @@ export function GreenDiffPage() {
                 </details>
               )}
 
-              {/* Proof Report Card */}
+              {/* Proof Report link */}
               {result.proof_report && (
-                <div
-                  className="card"
-                  data-testid="proof-report-card"
-                  style={{
-                    padding: '16px 20px',
-                    border: '1px solid var(--color-border)',
-                    background: 'var(--color-surface)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 12,
-                  }}
-                >
-                  {/* Header bar with ID, timestamp, and Export Actions */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <ShieldCheck
-                        size={18}
-                        style={{
-                          color:
-                            result.proof_report.correctness.status === 'verified'
-                              ? 'var(--color-success)'
-                              : result.proof_report.correctness.status === 'failed'
-                              ? 'var(--color-error)'
-                              : 'var(--color-warning)',
-                        }}
-                      />
-                      <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--color-heading)' }}>
-                        Proof Report
-                      </span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontFamily: 'monospace' }}>
-                        {result.proof_report.id}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <button
-                        id="copy-report-json-btn"
-                        className="btn btn-sm btn-ghost"
-                        onClick={handleCopyJson}
-                        title="Copy report JSON"
-                      >
-                        {copied ? <Check size={13} style={{ color: 'var(--color-success)' }} /> : <Copy size={13} />}
-                        {copied ? 'Copied' : 'Copy JSON'}
-                      </button>
-                      <button
-                        id="export-report-json-btn"
-                        className="btn btn-sm btn-outline"
-                        onClick={handleExportJson}
-                        title="Export Proof Report to JSON"
-                      >
-                        <Download size={13} /> Export JSON
-                      </button>
-                      <button
-                        id="export-report-html-btn"
-                        className="btn btn-sm btn-primary"
-                        onClick={handleExportHtml}
-                        title="Export standalone HTML proof certificate"
-                      >
-                        <FileText size={13} /> Export HTML
-                      </button>
-                    </div>
+                <div className="alert alert-success" style={{ justifyContent: 'space-between' }}>
+                  <div className="flex items-center gap-2">
+                    <FileCheck size={15} />
+                    <span>Proof Report generated — <strong>{result.proof_report.id}</strong></span>
                   </div>
-
-                  {/* Status Badges & Metadata */}
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem' }}>
-                      <span className="text-muted">Correctness:</span>
-                      <span
-                        className={`badge ${
-                          result.proof_report.correctness.status === 'verified'
-                            ? 'badge-success'
-                            : result.proof_report.correctness.status === 'failed'
-                            ? 'badge-error'
-                            : 'badge-neutral'
-                        }`}
-                      >
-                        {result.proof_report.correctness.label}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem' }}>
-                      <span className="text-muted">Performance:</span>
-                      <span
-                        className={`badge ${
-                          result.proof_report.performance.verdict === 'improvement'
-                            ? 'badge-success'
-                            : result.proof_report.performance.verdict === 'regression'
-                            ? 'badge-warning'
-                            : 'badge-neutral'
-                        }`}
-                      >
-                        {result.proof_report.performance.label}
-                      </span>
-                    </div>
-
-                    <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--color-muted)' }}>
-                      Provider: <strong>{result.proof_report.execution_provider.provider}</strong> ({result.proof_report.execution_provider.compiler}) &bull; Secrets Redacted: ✓
-                    </div>
-                  </div>
-
-                  {/* Source Proof & Cryptographic Hashes */}
-                  <div
-                    style={{
-                      background: 'var(--color-surface-2)',
-                      padding: '10px 14px',
-                      borderRadius: 6,
-                      fontSize: '0.75rem',
-                      fontFamily: 'monospace',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
-                    }}
+                  <button
+                    id="goto-proof-report-btn"
+                    className="btn btn-sm btn-primary"
+                    onClick={() => navigate('/proof-report')}
                   >
-                    <div>
-                      <strong style={{ color: 'var(--color-heading)' }}>Original SHA-256:</strong>{' '}
-                      <span style={{ color: 'var(--color-muted)', wordBreak: 'break-all' }}>
-                        {result.proof_report.source.original.sha256}
-                      </span>{' '}
-                      ({result.proof_report.source.original.bytes} bytes)
-                    </div>
-                    <div>
-                      <strong style={{ color: 'var(--color-heading)' }}>Candidate SHA-256:</strong>{' '}
-                      <span style={{ color: 'var(--color-muted)', wordBreak: 'break-all' }}>
-                        {result.proof_report.source.candidate.sha256}
-                      </span>{' '}
-                      ({result.proof_report.source.candidate.bytes} bytes)
-                    </div>
-                  </div>
-
-                  {/* Missing Metrics & Unresolved Risks */}
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.8125rem' }}>
-                    {result.proof_report.missing_metrics.length > 0 && (
-                      <div style={{ flex: '1 1 260px' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--color-warning)', marginBottom: 4 }}>
-                          Missing Evidence Metrics
-                        </div>
-                        <ul style={{ margin: 0, paddingLeft: 16, color: 'var(--color-muted)' }}>
-                          {result.proof_report.missing_metrics.map((m, i) => (
-                            <li key={i}>{m}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {result.proof_report.unresolved_risks.length > 0 && (
-                      <div style={{ flex: '1 1 260px' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--color-error)', marginBottom: 4 }}>
-                          Unresolved Risks
-                        </div>
-                        <ul style={{ margin: 0, paddingLeft: 16, color: 'var(--color-muted)' }}>
-                          {result.proof_report.unresolved_risks.map((r, i) => (
-                            <li key={i}>{r}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
+                    View Report <ArrowRight size={13} />
+                  </button>
                 </div>
               )}
             </div>
